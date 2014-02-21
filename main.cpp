@@ -1,103 +1,107 @@
 #include <string>
-#include <algorithm>    
 #include <iostream>
-#include <vector>
+#include <algorithm>
 
-void splitString(std::vector<std::string>& vec, std::string& str);
-void calculateElements(std::vector<std::string>& vec, double& sum);
+void calculateExpression(std::string& str);
+void calculateInput(std::string& str);
 
 int main()
 {
-	std::string inputString{"2+2"};
-	std::vector<std::string> cutString{};
+	std::string inputString{ "" };
+	double sum{ 0 };
 
 	std::cout << "\tWelcome to the basic calculator!\n" << std::endl;
-	std::cout << "You can perform a basic operation(/ * - +)" << std::endl;
+	std::cout << "You can perform a basic operation(/ * - + ^)" << std::endl;
 	std::cout << "Please enter your task:" << std::endl;
 	std::getline(std::cin, inputString);
-	
 
-	double sum{0};
-	splitString(cutString, inputString);
-	calculateElements(cutString, sum);
-
+	calculateInput(inputString);
+	sum = std::stod(inputString);
 
 	std::cout << "Total is: " << sum << std::endl;
 
 	return 0;
 }
 
-void splitString(std::vector<std::string>& vec, std::string& str)
+void calculateExpression(std::string& str)
 {
-	unsigned int pos{ 0 };
-	unsigned int newpos{};
+
+	double tempL{ 0 };
+	double tempR{ 0 };
+
+	str.erase(std::remove_if(str.begin(), str.end(), isspace), str.end());
+	auto pos = str.find_first_of("^", 0);
 	while (pos != std::string::npos)
 	{
-		newpos = str.find_first_of("+*/-xX", pos);
-		if (newpos != std::string::npos)
-			vec.push_back(std::move(str.substr(pos, newpos - pos)));
-		else
-			vec.push_back(std::move(str.substr(pos)));
-		if (newpos != std::string::npos)
-			vec.push_back(std::move(str.substr(newpos++, 1)));
-		pos = newpos;
+		//find the lhs begining of the expression by finding a non number
+		auto begin = str.find_last_not_of("0123456789.", (pos - 1));
+		//increase it by one to get the number
+		begin++;
+		//convert the numbers into doubles
+		tempL = std::stod(str.substr(begin));
+		tempR = std::stod(str.substr(++pos));
+		//calculate
+		tempL = std::pow(tempL, tempR);
+		//replace the expression with the answer
+		pos = str.find_first_not_of("1234567890.-", pos);
+		str.erase(begin, pos - begin);
+		str.insert(begin, std::to_string(tempL));
+		//find next power
+		pos = str.find_first_of("^", 0);
+	}
+	pos = str.find_first_of("*/", 0);
+	while (pos != std::string::npos)
+	{
+		//find the lhs begining of the expression by finding a non number
+		auto begin = str.find_last_not_of("0123456789.", (pos - 1));
+		//increase it by one to get the number
+		begin++;
+		//convert the numbers into doubles
+		tempL = std::stod(str.substr(begin));
+		tempR = std::stod(str.substr(++pos));
+		if (str[pos - 1] == '*')
+			tempL *= tempR;
+		else if (str[pos - 1] == '/')
+			tempL /= tempR;
+		//replace the expression with the answer
+		pos = str.find_first_not_of("1234567890.-", pos);
+		str.erase(begin, pos - begin);
+		str.insert(begin, std::to_string(tempL));
+		//find the next factor
+		pos = str.find_first_of("*/", 0);
+	}
+	//repeat for "+" and "-"
+	pos = str.find_first_of("+-", 0);
+	while (pos != std::string::npos && str[0] != '-')
+	{
+		auto begin = str.find_last_not_of("1234567890.", (pos - 1));
+		begin++;
+		tempL = std::stod(str.substr(begin));
+		tempR = std::stod(str.substr(++pos));
+		if (str[pos - 1] == '+')
+			tempL += tempR;
+		else if (str[pos - 1] == '-')
+			tempL -= tempR;
+		pos = str.find_first_not_of("1234567890.", pos);
+		str.erase(begin, pos - begin);
+		str.insert(begin, std::to_string(tempL));
+		pos = str.find_first_of("+-", 0);
 	}
 }
 
-void calculateElements(std::vector<std::string>& vec, double& sum)
+void calculateInput(std::string& str)
 {
-	auto result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "*" || c == "x" || c == "X" || c == "/"; });
-	while (result != vec.end())
+	str.erase(std::remove_if(str.begin(), str.end(), isspace), str.end());
+	auto front = str.find_last_of("(");
+	auto back = str.find_first_of(")", front);
+	while (front != std::string::npos && back != std::string::npos)
 	{
-		if (*result == "*" || *result == "X" || *result == "x")
-		{
-			--result;
-			sum = std::stod(*result);
-			result += 2;
-			sum *= std::stod(*result);
-		}
-		else if (*result == "/")
-		{
-			--result;
-			sum= std::stod(*result);
-			result += 2;
-			sum /= std::stod(*result);
-		}
-		result->swap(std::move(std::to_string(sum)));
-		auto temp = result - 2;
-		vec.erase(temp, result--);
-		result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "*" || c == "/"; });
-		sum = 0;
+		auto subString = str.substr(front + 1, back - front - 1);
+		calculateExpression(subString);
+		str.erase(front, back - front + 1);
+		str.insert(front, subString);
+		front = str.find_last_of("(", back);
+		back = str.find_first_of(")", front);
 	}
-	result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "+" || c == "/"; });
-	while (result != vec.end())
-	{
-		if (*result == "+")
-		{
-			--result;
-			sum =  std::stod(*result);
-			result += 2;
-			sum += std::stod(*result);
-		}
-		else if (*result == "-")
-		{
-			--result;
-			if (*result == "(")
-				std::stod(*(result + 1));
-			else
-			{
-				sum = std::stod(*result);
-				result += 2;
-				sum -= std::stod(*result);
-			}
-		}
-		result->swap(std::to_string(sum));
-		auto temp = result - 2;
-		vec.erase(temp, result--);
-		result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "+" || c == "-"; });
-		sum = 0;
-	}
-
-	sum = std::stod(vec[0]);
-
+	calculateExpression(str);
 }
