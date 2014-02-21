@@ -1,89 +1,103 @@
-#include <iostream>
 #include <string>
-#include <algorithm>
+#include <algorithm>    
+#include <iostream>
 #include <vector>
 
-double addTotal(const double& lhs, const double& rhs);
-double subtractTotal(const double& lhs, const double& rhs);
-double productTotal(const double& lhs, const double& rhs);
-double divideTotal(const double& lhs, const double& rhs);
+void splitString(std::vector<std::string>& vec, std::string& str);
+void calculateElements(std::vector<std::string>& vec, double& sum);
 
 int main()
 {
-	std::string tempString{};
-	std::string input{};
-	std::vector<std::string> calculation{};
-	char x{'*'};
+	std::string inputString{"2+2"};
+	std::vector<std::string> cutString{};
 
-	std::cout << "Welcome to the basic calculator!" << std::endl;
-	std::cout << "I can only perform basic calculations and only 2 inputs at a time" << std::endl;
-	std::cout << R"(For example "2+2" or "10*2")" << std::endl;
-	std::cout << "\nPlease enter the calculation you wish to calculate: ";
-	std::getline(std::cin, input);
-	double x1 = std::stof(input);
+	std::cout << "\tWelcome to the basic calculator!\n" << std::endl;
+	std::cout << "You can perform a basic operation(/ * - +)" << std::endl;
+	std::cout << "Please enter your task:" << std::endl;
+	std::getline(std::cin, inputString);
 	
-	auto op = std::find_if(input.begin(), input.end(), [x](char n) {return n == x; });
-	if (op == input.end())
-	{
-		x = '/';
-		op = std::find_if(input.begin(), input.end(), [x](char n) {return n == x; });
-		if (op == input.end())
-		{
-			x = '+';
-			op = std::find_if(input.begin(), input.end(), [x](char n) {return n == x; });
-			if (op == input.end())
-			{
-				x = '-';
-				op = std::find_if(input.begin(), input.end(), [x](char n) {return n == x; });
-			}
-		}
-	}
-	std::copy(++op, input.end(), std::back_inserter(tempString));
-	double x2 = std::stof(tempString);
 
-	double sum{};
-	switch (x)
-	{
-	case '+':
-		sum = addTotal(x1, x2);
-		break;
-	case '-':
-		sum = subtractTotal(x1, x2);
-		break;
-	case '/':
-		sum = divideTotal(x1, x2);
-		break;
-	case '*':
-		sum = productTotal(x1, x2);
-		break;
-	default:std::cout << "error" << std::endl;
-		break;
-	}
-	
-	std::cout << "\nYour total is:" << sum << std::endl;
+	double sum{0};
+	splitString(cutString, inputString);
+	calculateElements(cutString, sum);
+
+
+	std::cout << "Total is: " << sum << std::endl;
+
 	return 0;
 }
 
-double addTotal(const double& lhs, const double& rhs)
+void splitString(std::vector<std::string>& vec, std::string& str)
 {
-	double sum{ lhs + rhs };
-	return sum;
+	unsigned int pos{ 0 };
+	unsigned int newpos{};
+	while (pos != std::string::npos)
+	{
+		newpos = str.find_first_of("+*/-xX", pos);
+		if (newpos != std::string::npos)
+			vec.push_back(std::move(str.substr(pos, newpos - pos)));
+		else
+			vec.push_back(std::move(str.substr(pos)));
+		if (newpos != std::string::npos)
+			vec.push_back(std::move(str.substr(newpos++, 1)));
+		pos = newpos;
+	}
 }
 
-double subtractTotal(const double& lhs, const double& rhs)
+void calculateElements(std::vector<std::string>& vec, double& sum)
 {
-	double sum{ lhs - rhs };
-	return sum;
-}
+	auto result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "*" || c == "x" || c == "X" || c == "/"; });
+	while (result != vec.end())
+	{
+		if (*result == "*" || *result == "X" || *result == "x")
+		{
+			--result;
+			sum = std::stod(*result);
+			result += 2;
+			sum *= std::stod(*result);
+		}
+		else if (*result == "/")
+		{
+			--result;
+			sum= std::stod(*result);
+			result += 2;
+			sum /= std::stod(*result);
+		}
+		result->swap(std::move(std::to_string(sum)));
+		auto temp = result - 2;
+		vec.erase(temp, result--);
+		result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "*" || c == "/"; });
+		sum = 0;
+	}
+	result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "+" || c == "/"; });
+	while (result != vec.end())
+	{
+		if (*result == "+")
+		{
+			--result;
+			sum =  std::stod(*result);
+			result += 2;
+			sum += std::stod(*result);
+		}
+		else if (*result == "-")
+		{
+			--result;
+			if (*result == "(")
+				std::stod(*(result + 1));
+			else
+			{
+				sum = std::stod(*result);
+				result += 2;
+				sum -= std::stod(*result);
+			}
+		}
+		result->swap(std::to_string(sum));
+		auto temp = result - 2;
+		vec.erase(temp, result--);
+		result = std::find_if(vec.begin(), vec.end(), [](std::string c) {return c == "+" || c == "-"; });
+		sum = 0;
+	}
 
-double divideTotal(const double& lhs, const double& rhs)
-{
-	double sum{ lhs / rhs };
-	return sum;
-}
+	sum = std::stod(vec[0]);
 
-double productTotal(const double& lhs, const double& rhs)
-{
-	double sum{ lhs*rhs };
-	return sum;
 }
